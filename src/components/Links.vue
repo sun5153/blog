@@ -43,8 +43,7 @@
 <script setup>
 import { Icon } from "@vicons/utils";
 // 可前往 https://www.xicons.org 自行挑选并在此处引入
-#import { Link, Blog, CompactDisc, Cloud, Compass, Book, Fire, LaptopCode } from "@vicons/fa"; // 注意使用正确的类别
-#import { Link, Blog, CompactDisc, Cloud, Compass, Book, Fire, LaptopCode, Wallet } from "@vicons/fa";
+
   // 找到这一行，加上 Coins
 import { Link, Blog, CompactDisc, Cloud, Compass, Book, Fire, LaptopCode, Coins } from "@vicons/fa";
 import { mainStore } from "@/store";
