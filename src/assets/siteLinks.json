@@ -34,9 +34,9 @@
     "name": "站点监测",
     "link": "https://status.wakmar.cn/"
   },
-  {
+    {
     "name": "个人储蓄",
     "link": "https://savings.wakmar.cn/",
-    "icon": "Wallet"
+    "icon": "Coins"
   }
 ]
