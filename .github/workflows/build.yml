@@ -10,7 +10,7 @@ on:
 jobs:
   release:
     name: Build & Deploy Website
-    runs-on: ubuntu-latest # 改为 Linux 环境，对 SSH 部署支持更好
+    runs-on: ubuntu-latest # 使用 Linux 环境编译和部署
 
     steps:
       # 检出 Git 仓库
@@ -43,9 +43,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
       # ================= 自动部署到服务器 =================
-     # ... 前面的安装编译步骤保持不变 ...
-
-      # 1. 传文件：用受限的 deploy 账号（被 Chroot 限制在 html 目录）
+      # 1. 通过 SSH 传文件（使用 deploy 账号）
       - name: Deploy to Server
         uses: easingthemes/ssh-deploy@main
         with:
@@ -53,21 +51,20 @@ jobs:
           ARGS: "-rlgoDzvc -i --delete"
           SOURCE: "dist/"
           REMOTE_HOST: ${{ secrets.SERVER_HOST }}
-          REMOTE_USER: "deploy" # 👈 这里强制用 deploy
+          REMOTE_USER: "deploy"
           REMOTE_PORT: 10022
-          TARGET: ${{ secrets.TARGET_DIR }} # 填 /personal_web 相对于 chroot 根目录的路径
+          TARGET: "/usr/share/nginx/html/personal_web/"
           EXCLUDE: "/node_modules/"
 
-      # 2. 压缩：用 root 账号（去服务器上执行压缩命令）
+      # 2. 在服务器上执行 Gzip 压缩（使用 root 账号）
       - name: Gzip Compression
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
-          username: "root" # 👈 这里强制用 root
+          username: "root"
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 10022
           script: |
-            # 注意：执行完 deploy 传文件后，所有文件归属可能是 deploy，root 可以直接操作
             cd /usr/share/nginx/html/personal_web/
             gzip -kf index.html
             find assets/ -type f ! -name "*.gz" -exec gzip -kf {} \;
