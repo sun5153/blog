@@ -1,5 +1,4 @@
 # Dev 分支推送部署预览
-## 仅部署 Win 端
 name: Build Dev
 
 on:
@@ -10,37 +9,62 @@ on:
 
 jobs:
   release:
-    name: Build Website
-    runs-on: windows-latest
+    name: Build & Deploy Website
+    runs-on: ubuntu-latest # 改为 Linux 环境，对 SSH 部署支持更好
 
     steps:
       # 检出 Git 仓库
       - name: Check out git repository
         uses: actions/checkout@v4.1.1
+
       # 安装 Node.js
       - name: Install Node.js
         uses: actions/setup-node@v4.0.0
         with:
           node-version: "18.x"
+
       # 复制环境变量文件
       - name: Copy .env.example
         run: |
-          if (-not (Test-Path .env)) {
-            Copy-Item .env.example .env
-          } else {
-            Write-Host ".env file already exists. Skipping the copy step."
-          }
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          else
+            echo ".env file already exists. Skipping the copy step."
+          fi
+
       # 安装项目依赖
       - name: Install Dependencies
         run: npm install
+
       # 构建程序
       - name: Build Website
         run: npm run build
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-      # 上传构建产物
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+
+      # ================= 自动部署到服务器 =================
+      # 1. 通过 SSH 传文件
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@main
         with:
-          name: Home
-          path: dist
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ARGS: "-rlgoDzvc -i --delete"
+          SOURCE: "dist/"
+          REMOTE_HOST: ${{ secrets.SERVER_HOST }}
+          REMOTE_USER: ${{ secrets.SERVER_USER }}
+          REMOTE_PORT: 10022  # 你的 SSH 端口
+          TARGET: ${{ secrets.TARGET_DIR }}
+          EXCLUDE: "/node_modules/"
+
+      # 2. 在服务器上执行 Gzip 压缩
+      - name: Gzip Compression
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 10022 # 你的 SSH 端口
+          script: |
+            cd ${{ secrets.TARGET_DIR }}
+            gzip -kf index.html
+            find assets/ -type f ! -name "*.gz" -exec gzip -kf {} \;
